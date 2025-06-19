@@ -1,7 +1,4 @@
-// popup.js
-
 document.addEventListener("DOMContentLoaded", () => {
-  // Modal close logic
   const modalClose = document.getElementById("modal-close");
   const infoModal = document.getElementById("info-modal");
   modalClose.addEventListener("click", () => {
@@ -9,7 +6,6 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-// --- Dark/Light Theme Toggle ---
 const THEME_KEY = "theme";
 const htmlEl = document.documentElement;
 const toggleBtn = document.getElementById("theme-toggle");
@@ -32,11 +28,9 @@ toggleBtn.addEventListener("click", () => {
   chrome.storage.sync.set({ [THEME_KEY]: nowDark ? "dark" : "light" });
 });
 
-// --- Summarizer + Custom Prompt + Selection Logic ---
 async function getSelectionOrArticle() {
   return new Promise((resolve) => {
     chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-      // Try to get user selection
       chrome.tabs.sendMessage(
         tab.id,
         { type: "GET_SELECTION_TEXT" },
@@ -44,7 +38,7 @@ async function getSelectionOrArticle() {
           if (selResp?.text?.trim()) {
             return resolve(selResp.text);
           }
-          // Fallback to full article
+
           chrome.tabs.sendMessage(
             tab.id,
             { type: "GET_ARTICLE_TEXT" },
@@ -77,7 +71,33 @@ document.getElementById("summarize").addEventListener("click", async () => {
       return;
     }
 
-    // Build prompt
+    const defaultPrompts = {
+      brief: `Summarize the following text in 2–3 sentences:
+
+${rawText}`,
+
+      detailed: `Provide a detailed summary of the following text:
+
+${rawText}`,
+
+      bullets: `Summarize the following text in 5–7 bullet points (start each line with "-"):
+
+${rawText}`,
+
+      email: `Draft a clear, professional email based on the following content. Include:
+- A suitable greeting
+- A concise description of purpose
+- The key details
+- A polite closing and signature
+
+Content:
+${rawText}`,
+
+      grammar: `Proofread and correct the grammar, spelling, punctuation, and style of the following text. Preserve the original meaning:
+
+${rawText}`,
+    };
+
     let prompt;
     if (customPrompt) {
       prompt = `${customPrompt}
@@ -85,18 +105,7 @@ document.getElementById("summarize").addEventListener("click", async () => {
 Context:
 ${rawText}`;
     } else {
-      const map = {
-        brief: `Summarize in 2-3 sentences:
-
-${rawText}`,
-        detailed: `Give a detailed summary:
-
-${rawText}`,
-        bullets: `Summarize in 5-7 bullet points (start each line with "-"):
-
-${rawText}`,
-      };
-      prompt = map[summaryType] || map.brief;
+      prompt = defaultPrompts[summaryType] || defaultPrompts.brief;
     }
 
     try {
@@ -108,7 +117,6 @@ ${rawText}`,
   });
 });
 
-// Copy to clipboard
 document.getElementById("copy-btn").addEventListener("click", () => {
   const text = document.getElementById("result").textContent;
   navigator.clipboard.writeText(text).then(() => {
@@ -118,7 +126,6 @@ document.getElementById("copy-btn").addEventListener("click", () => {
   });
 });
 
-// --- Gemini API Call ---
 async function getGeminiSummary(prompt, apiKey) {
   const payload = {
     contents: [{ parts: [{ text: prompt }] }],
